@@ -9,8 +9,8 @@
   "main": "rln_ui_plugin",
   "view": "qml/Main.qml",
   "dependencies": [
-    { "name": "delivery_module", "version": "~0.4.0" },
-    { "name": "liblogos_rln_module", "version": "~0.12.0" }
+    "delivery_module",
+    "liblogos_rln_module"
   ],
   "provides": [],
   "uses": [],
