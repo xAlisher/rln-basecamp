@@ -1,4 +1,5 @@
 #include "rln_ui_backend.h"
+#include "logos_sdk.h"   // generated umbrella: full LogosModules (modules() + .dynamic())
 
 #include <nlohmann/json.hpp>
 #include <QDateTime>

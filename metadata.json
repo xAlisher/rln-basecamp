@@ -27,6 +27,5 @@
       "extra_link_libraries": []
     }
   },
-  "icon": "src/icons/icon.png",
-  "backend": "module"
+  "icon": "src/icons/icon.png"
 }
