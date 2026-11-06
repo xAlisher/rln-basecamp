@@ -5,18 +5,15 @@
 
 #include <QTimer>
 
-// RLN membership backend (universal UI-plugin authoring model). It gets a modules() aggregate with
-// one member per declared dependency (delivery_module, liblogos_rln_module). All core interaction
-// lives here; the QML view only reads replica props and calls these slots.
+// RLN membership backend, run as a core module ("backend":"module"). It gets a modules() aggregate
+// with one member per declared dependency (delivery_module, liblogos_rln_module,
+// liblogos_lez_rln_module). All core interaction lives here; the QML view only reads replica props.
 class RlnUiBackend : public RlnUiSimpleSource, public LogosModuleContext
 {
 public:
     // replica slots
     void start() override;
     void refresh() override;
-    QString unlockKeystore() override;
-    QString provisionWallet() override;
-    QString registerMembership() override;
 
 protected:
     void onContextReady() override;   // called once the module context (modules(), persistence) is ready

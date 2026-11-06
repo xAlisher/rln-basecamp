@@ -12,6 +12,7 @@
     # version only needs to carry the methods we call (createNode/start/rlnState; rln reads).
     delivery_module.url = "github:logos-co/logos-delivery-module/v0.3.3";
     liblogos_rln_module.url = "github:logos-co/logos-rln-modules?dir=logos-rln-module";
+    liblogos_lez_rln_module.url = "github:logos-co/logos-rln-modules?dir=logos-lez-rln-module";
   };
 
   # A ui_qml module with a C++ backend builds with mkLogosQmlModule (NOT mkLogosModule, which is

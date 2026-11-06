@@ -1,22 +1,26 @@
-// Replica interface for rln_ui's backend module. QML gets this via logos.module("rln_ui").
-// READONLY props auto-emit change signals; the backend publishes RLN status onto them.
-// Slots are called from QML with logos.watch(backend.slot(args), onOk, onErr).
+// Replica interface for rln_ui's backend (runs as the core module rln_ui_backend when
+// metadata has "backend":"module"). QML gets it via logos.module("rln_ui") and reads these
+// READONLY props; the backend publishes RLN + payer status onto them. No action slots: the
+// node funds and registers its own membership (the user only funds the payer account).
 class RlnUi
 {
-    PROP(QString nodeRlnState="unknown" READONLY)     // delivery_module.rlnState().state (Ready, ...)
+    PROP(QString nodeRlnState="unknown" READONLY)     // delivery_module.rlnState().state
     PROP(QString deliveryStatus="starting" READONLY)  // delivery connection status
-    PROP(QString membershipState="unknown" READONLY)  // get_membership_state -> unknown|pending|active|failed
-    PROP(int membershipCount=0 READONLY)              // get_memberships length
-    PROP(QString quota="n/a" READONLY)                // get_epoch_quota summary
+    PROP(QString membershipState="unknown" READONLY)  // unknown|pending|active|failed
+    PROP(int membershipCount=0 READONLY)
+    PROP(QString quota="n/a" READONLY)                // epoch quota summary
     PROP(QString registryId="" READONLY)              // rln registry (fleet)
     PROP(QString rlnIdentifier="" READONLY)
     PROP(int epochSizeSec=0 READONLY)
 
-    SLOT(void start())                 // bring up a logos.test delivery node + begin polling
-    SLOT(void refresh())               // one read cycle (also runs on a timer)
+    // Payer account funding model (liblogos_lez_rln_module): the node derives a payer account on
+    // LEZ, the user funds it (no faucet; bridge from the Logos Blockchain), the node self-registers.
+    PROP(QString payerAccount="" READONLY)            // payer account, hex64
+    PROP(QString payerAccountB58="" READONLY)         // base58 of the payer account (for display/copy)
+    PROP(QString payerBalance="" READONLY)            // live native balance, decimal string
+    PROP(QString fundTargetUnits="" READONLY)         // suggested fund amount, decimal string
+    PROP(QString walletState="pending" READONLY)      // pending|ready|failed
 
-    // membership actions (Epic 4) — return a short JSON/result string for the UI
-    SLOT(QString unlockKeystore())
-    SLOT(QString provisionWallet())
-    SLOT(QString registerMembership())
+    SLOT(void start())
+    SLOT(void refresh())
 }

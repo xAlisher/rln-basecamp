@@ -14,10 +14,12 @@ Rectangle {
 
     readonly property var backend: logos.module("rln_ui")
     property bool ready: false
-    property string actionNote: ""
-
     readonly property int cardW: Math.min(width - 2 * Theme.spacing.xlarge, 560)
     function shorten(s) { return (s && s.length > 16) ? (s.slice(0, 8) + "…" + s.slice(-6)) : (s || "—") }
+    function fmt(s) {
+        var str = String(s || "").replace(/[^0-9]/g, "")
+        return str.length ? str.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : "0"
+    }
 
     // convenience readers (guard against a not-yet-ready backend)
     readonly property string nodeRln:    ready && backend ? backend.nodeRlnState   : "unknown"
@@ -28,6 +30,10 @@ Rectangle {
     readonly property string registry:   ready && backend ? backend.registryId      : ""
     readonly property string identity:   ready && backend ? backend.rlnIdentifier   : ""
     readonly property int    epoch:      ready && backend ? backend.epochSizeSec     : 0
+    readonly property string payer:      ready && backend ? backend.payerAccountB58 : ""
+    readonly property string balance:    ready && backend ? backend.payerBalance    : ""
+    readonly property string fundTarget: ready && backend ? backend.fundTargetUnits : ""
+    readonly property string wallet:     ready && backend ? backend.walletState     : "pending"
     readonly property bool   hasMembership: memberCount > 0 || member === "active"
 
     function begin() { if (root.ready) root.backend.start() }
@@ -98,21 +104,45 @@ Rectangle {
                 }
             }
 
-            // Set up a membership (staged actions via the backend's slots)
+            // Fund the payer to get a membership — informational, no action buttons. The node derives
+            // a payer account on LEZ; the user funds it (no faucet, bridge from the Logos Blockchain);
+            // the node registers its OWN membership once it sees the funds.
             ColumnLayout {
                 Layout.fillWidth: true; spacing: Theme.spacing.medium; visible: !root.hasMembership
-                LogosText { text: "Set up a membership"; font.weight: Theme.typography.weightBold }
+                LogosText { text: "Get a membership"; font.weight: Theme.typography.weightBold }
                 LogosText {
-                    text: "A membership lets this node send on the testnet. It needs a funded account on the LEZ registry; that chain path is still being wired, so the last step may not complete yet."
+                    text: "This node pays for its own RLN membership from a payer account on the LEZ chain. Fund that account and the node registers itself automatically — nothing to click here."
                     color: Theme.palette.textTertiary; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true
                 }
-                LogosButton { Layout.fillWidth: true; variant: LogosButton.Variant.Secondary; text: "1. Unlock keystore"; enabled: root.ready
-                    onClicked: logos.watch(root.backend.unlockKeystore(), function(v){ root.actionNote = "Unlock: " + v }, function(e){ root.actionNote = "Unlock error: " + e }) }
-                LogosButton { Layout.fillWidth: true; variant: LogosButton.Variant.Secondary; text: "2. Provision wallet"; enabled: root.ready
-                    onClicked: logos.watch(root.backend.provisionWallet(), function(v){ root.actionNote = "Provision: " + v }, function(e){ root.actionNote = "Provision error: " + e }) }
-                LogosButton { Layout.fillWidth: true; variant: LogosButton.Variant.Primary; text: "3. Register membership"; enabled: root.ready && root.registry.length > 0
-                    onClicked: logos.watch(root.backend.registerMembership(), function(v){ root.actionNote = "Register: " + v }, function(e){ root.actionNote = "Register error: " + e }) }
-                LogosText { text: root.actionNote; visible: root.actionNote.length > 0; color: Theme.palette.textSecondary; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+
+                LogosText { text: "Payer account"; color: Theme.palette.textSecondary; font.pixelSize: 12 }
+                LogosTextField {
+                    Layout.fillWidth: true; readOnly: true
+                    text: root.payer.length > 0 ? root.payer : "deriving…"
+                }
+
+                LogosText {
+                    text: "Fund ~" + root.fmt(root.fundTarget || "250000000") + " units (min " + root.fmt("182800000") + ") by bridging from the Logos Blockchain."
+                    color: Theme.palette.text; font.pixelSize: 13; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true; radius: Theme.spacing.radiusSmall
+                    color: Theme.palette.surface; border.color: Theme.palette.border; border.width: 1
+                    Layout.preferredHeight: balCol.implicitHeight + 2 * Theme.spacing.small
+                    ColumnLayout {
+                        id: balCol; anchors.fill: parent; anchors.margins: Theme.spacing.small; spacing: 2
+                        RowLayout {
+                            Layout.fillWidth: true
+                            LogosText { text: "Payer balance"; color: Theme.palette.textSecondary; Layout.fillWidth: true }
+                            LogosText { text: root.fmt(root.balance || "0"); color: Theme.palette.text }
+                        }
+                        LogosText {
+                            text: (root.wallet === "ready" ? "Wallet ready. " : "") + "Polling until the payer is funded; the node then registers itself."
+                            color: Theme.palette.textTertiary; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                        }
+                    }
+                }
             }
         }
     }
