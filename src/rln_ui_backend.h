@@ -8,7 +8,7 @@
 // RLN membership backend. interface=universal, so it gets the Qt-free lp surface and a
 // modules() aggregate with one member per declared dependency (delivery_module, liblogos_rln_module).
 // All core interaction lives here; the QML view only reads replica props and calls these slots.
-class RlnBackend : public RlnUiSimpleSource, public LogosModuleContext
+class RlnUiBackend : public RlnUiSimpleSource, public LogosModuleContext
 {
 public:
     // replica slots

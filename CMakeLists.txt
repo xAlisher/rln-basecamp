@@ -18,8 +18,8 @@ logos_module(
     NAME ${MODULE_NAME}
     REP_FILE src/rln_ui.rep
     SOURCES
-        src/RlnBackend.h
-        src/RlnBackend.cpp
+        src/rln_ui_backend.h
+        src/rln_ui_backend.cpp
     INCLUDE_DIRS
         src
 )

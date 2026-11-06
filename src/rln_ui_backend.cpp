@@ -1,4 +1,4 @@
-#include "RlnBackend.h"
+#include "rln_ui_backend.h"
 
 #include <nlohmann/json.hpp>
 #include <QDateTime>
@@ -25,9 +25,9 @@ QString jstr(const json& v, const char* key, const QString& dflt = QString()) {
 }
 }
 
-void RlnBackend::onContextReady() { start(); }
+void RlnUiBackend::onContextReady() { start(); }
 
-void RlnBackend::start() {
+void RlnUiBackend::start() {
     if (!m_nodeUp) bringUpNode();
     if (!m_timer) {
         m_timer = new QTimer(this);
@@ -37,7 +37,7 @@ void RlnBackend::start() {
     refresh();
 }
 
-void RlnBackend::bringUpNode() {
+void RlnUiBackend::bringUpNode() {
     logos::CallError err;
     auto delivery = modules().dynamic("delivery_module");
     delivery.invoke("createNode", json::array({ std::string(kNodeCfg) }), &err, 45000); // adopt if already up
@@ -45,7 +45,7 @@ void RlnBackend::bringUpNode() {
     m_nodeUp = true;
 }
 
-void RlnBackend::refresh() {
+void RlnUiBackend::refresh() {
     logos::CallError err;
     auto delivery = modules().dynamic("delivery_module");
     auto rln = modules().dynamic("liblogos_rln_module");
@@ -86,17 +86,17 @@ void RlnBackend::refresh() {
 }
 
 // --- membership actions (Epic 4): wired to the rln module; the register path needs a funded LEZ account ---
-QString RlnBackend::unlockKeystore() {
+QString RlnUiBackend::unlockKeystore() {
     logos::CallError err;
     json r = modules().dynamic("liblogos_rln_module").invoke("unlock_keystore_auto", json::array(), &err, 15000);
     return err.code.empty() ? QString::fromStdString(r.dump()) : QString::fromStdString("error: " + err.code);
 }
-QString RlnBackend::provisionWallet() {
+QString RlnUiBackend::provisionWallet() {
     logos::CallError err;
     json r = modules().dynamic("liblogos_rln_module").invoke("provision_wallet_home", json::array({ std::string("{}") }), &err, 20000);
     return err.code.empty() ? QString::fromStdString(r.dump()) : QString::fromStdString("error: " + err.code);
 }
-QString RlnBackend::registerMembership() {
+QString RlnUiBackend::registerMembership() {
     logos::CallError err;
     json r = modules().dynamic("liblogos_rln_module").invoke(
         "register_membership",
