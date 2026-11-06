@@ -1,28 +1,18 @@
 #include "rln_ui_backend.h"
-#include "logos_sdk.h"   // generated umbrella: full LogosModules (modules() + .dynamic())
+#include "logos_sdk.h"   // generated umbrella: LogosModules (modules().delivery_module / .liblogos_rln_module)
 
-#include <nlohmann/json.hpp>
 #include <QDateTime>
-#include <string>
-
-using nlohmann::json;
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 namespace {
 // logos.test = RLN enabled (devnet logos.dev has RLN disabled). Verified via probe 2026-11-06.
 const char* kNodeCfg = R"JSON({"logLevel":"ERROR","mode":"Core","preset":"logos.test","relay":true,"tcpPort":0,"discv5UdpPort":0,"entryNodes":["/dns4/node-01.do-ams3.logos.test.status.im/tcp/30303/p2p/16Uiu2HAmQ9X2xDfPG3uL77V9piYDhjq14JhKCtcmNYsTMKNqrKCj","/dns4/node-02.gc-us-central1-a.logos.test.status.im/tcp/30303/p2p/16Uiu2HAmUuXhUW9bdJpzN1kfDziFiUZo4bszTk66cvr7uuyCHXR7"]})JSON";
 
-// lp replies sometimes wrap the payload as {"value": X}; tstr methods can come back as a JSON string
-// that must be parsed again (seen in the probe). Normalise both into a usable json value.
-json unwrap(const json& r) {
-    json v = r;
-    if (v.is_object() && v.contains("value")) v = v["value"];
-    if (v.is_string()) { try { v = json::parse(v.get<std::string>()); } catch (...) {} }
-    return v;
-}
-QString jstr(const json& v, const char* key, const QString& dflt = QString()) {
-    if (v.is_object() && v.contains(key) && v[key].is_string())
-        return QString::fromStdString(v[key].get<std::string>());
-    return dflt;
+QJsonObject parseObj(const QString& s) {
+    const QJsonDocument d = QJsonDocument::fromJson(s.toUtf8());
+    return d.isObject() ? d.object() : QJsonObject();
 }
 }
 
@@ -39,69 +29,62 @@ void RlnUiBackend::start() {
 }
 
 void RlnUiBackend::bringUpNode() {
-    logos::CallError err;
-    auto delivery = modules().dynamic("delivery_module");
-    delivery.invoke("createNode", json::array({ std::string(kNodeCfg) }), &err, 45000); // adopt if already up
-    delivery.invoke("start", json::array(), &err, 20000);
+    modules().delivery_module.createNode(QString::fromUtf8(kNodeCfg));  // adopt if already up
+    modules().delivery_module.start();
     m_nodeUp = true;
 }
 
 void RlnUiBackend::refresh() {
-    logos::CallError err;
-    auto delivery = modules().dynamic("delivery_module");
-    auto rln = modules().dynamic("liblogos_rln_module");
+    DeliveryModule& delivery = modules().delivery_module;
+    LiblogosRlnModule& rln = modules().liblogos_rln_module;
 
-    json cs = unwrap(delivery.invoke("getConnectionStatus", json::array(), &err, 10000));
-    if (cs.is_string()) setDeliveryStatus(QString::fromStdString(cs.get<std::string>()));
+    const LogosResult cs = delivery.getConnectionStatus();
+    if (cs.success) setDeliveryStatus(cs.getString());
 
-    json rs = unwrap(delivery.invoke("rlnState", json::array(), &err, 10000));
-    if (rs.is_object()) {
-        setNodeRlnState(jstr(rs, "state", nodeRlnState()));
-        const QString reg = jstr(rs, "registryId", registryId());
+    const LogosResult rs = delivery.rlnState();
+    if (rs.success) {
+        const QString st = rs.getString("state");
+        if (!st.isEmpty()) setNodeRlnState(st);
+        const QString reg = rs.getString("registryId");
         if (!reg.isEmpty()) setRegistryId(reg);
-        const QString rid = jstr(rs, "rlnIdentifier", rlnIdentifier());
+        const QString rid = rs.getString("rlnIdentifier");
         if (!rid.isEmpty()) setRlnIdentifier(rid);
-        if (rs.contains("epochSizeSec") && rs["epochSizeSec"].is_number())
-            setEpochSizeSec(rs["epochSizeSec"].get<int>());
+        const int es = rs.getInt("epochSizeSec");
+        if (es > 0) setEpochSizeSec(es);
     }
 
     if (registryId().isEmpty()) return;
-    const std::string reg = registryId().toStdString();
-    const std::string rid = rlnIdentifier().toStdString();
+    const QString reg = registryId();
+    const QString rid = rlnIdentifier();
 
-    json ms = unwrap(rln.invoke("get_membership_state", json::array({ reg, rid }), &err, 10000));
-    setMembershipState(jstr(ms, "state", QStringLiteral("unknown")));
+    const QJsonObject ms = parseObj(rln.get_membership_state(reg, rid));
+    setMembershipState(ms.value("state").toString(QStringLiteral("unknown")));
 
-    json gm = unwrap(rln.invoke("get_memberships", json::array({ reg }), &err, 10000));
-    if (gm.is_object() && gm.contains("memberships") && gm["memberships"].is_array())
-        setMembershipCount(static_cast<int>(gm["memberships"].size()));
+    const QJsonObject gm = parseObj(rln.get_memberships(reg));
+    setMembershipCount(gm.value("memberships").toArray().size());
 
-    const std::string ts = std::to_string(QDateTime::currentSecsSinceEpoch());
-    json q = unwrap(rln.invoke("get_epoch_quota", json::array({ reg, rid, ts }), &err, 10000));
-    if (q.is_object() && q.contains("rate_limit")) {
-        setQuota(QStringLiteral("%1 / %2 this epoch")
-                     .arg(q.value("remaining", 0)).arg(q.value("rate_limit", 0)));
-    } else if (membershipCount() == 0) {
+    const QString ts = QString::number(QDateTime::currentSecsSinceEpoch());
+    const LogosResult q = rln.get_epoch_quota(reg, rid, ts);
+    if (q.success)
+        setQuota(QStringLiteral("%1 / %2 this epoch").arg(q.getInt("remaining")).arg(q.getInt("rate_limit")));
+    else if (membershipCount() == 0)
         setQuota(QStringLiteral("n/a until membership"));
-    }
 }
 
-// --- membership actions (Epic 4): wired to the rln module; the register path needs a funded LEZ account ---
+// --- membership actions: wired to the rln module; the register path needs a funded LEZ account ---
 QString RlnUiBackend::unlockKeystore() {
     logos::CallError err;
-    json r = modules().dynamic("liblogos_rln_module").invoke("unlock_keystore_auto", json::array(), &err, 15000);
-    return err.code.empty() ? QString::fromStdString(r.dump()) : QString::fromStdString("error: " + err.code);
+    const QString r = modules().liblogos_rln_module.unlock_keystore_auto(&err);
+    return err.ok() ? r : QStringLiteral("error: %1").arg(QString::fromStdString(err.message));
 }
 QString RlnUiBackend::provisionWallet() {
     logos::CallError err;
-    json r = modules().dynamic("liblogos_rln_module").invoke("provision_wallet_home", json::array({ std::string("{}") }), &err, 20000);
-    return err.code.empty() ? QString::fromStdString(r.dump()) : QString::fromStdString("error: " + err.code);
+    const QString r = modules().liblogos_rln_module.provision_wallet_home(QStringLiteral("{}"), &err);
+    return err.ok() ? r : QStringLiteral("error: %1").arg(QString::fromStdString(err.message));
 }
 QString RlnUiBackend::registerMembership() {
     logos::CallError err;
-    json r = modules().dynamic("liblogos_rln_module").invoke(
-        "register_membership",
-        json::array({ registryId().toStdString(), rlnIdentifier().toStdString(), std::string("{}") }),
-        &err, 30000);
-    return err.code.empty() ? QString::fromStdString(r.dump()) : QString::fromStdString("error: " + err.code);
+    const QString r = modules().liblogos_rln_module.register_membership(
+        registryId(), rlnIdentifier(), QStringLiteral("{}"), &err);
+    return err.ok() ? r : QStringLiteral("error: %1").arg(QString::fromStdString(err.message));
 }
