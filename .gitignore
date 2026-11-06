@@ -1,0 +1,6 @@
+build/
+result
+result-*
+*.lgx
+generated_code/
+.direnv/

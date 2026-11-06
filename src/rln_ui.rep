@@ -1,0 +1,22 @@
+// Replica interface for rln_ui's backend module. QML gets this via logos.module("rln_ui").
+// READONLY props auto-emit change signals; the backend publishes RLN status onto them.
+// Slots are called from QML with logos.watch(backend.slot(args), onOk, onErr).
+class RlnUi
+{
+    PROP(QString nodeRlnState="unknown" READONLY)     // delivery_module.rlnState().state (Ready, ...)
+    PROP(QString deliveryStatus="starting" READONLY)  // delivery connection status
+    PROP(QString membershipState="unknown" READONLY)  // get_membership_state -> unknown|pending|active|failed
+    PROP(int membershipCount=0 READONLY)              // get_memberships length
+    PROP(QString quota="n/a" READONLY)                // get_epoch_quota summary
+    PROP(QString registryId="" READONLY)              // rln registry (fleet)
+    PROP(QString rlnIdentifier="" READONLY)
+    PROP(int epochSizeSec=0 READONLY)
+
+    SLOT(void start())                 // bring up a logos.test delivery node + begin polling
+    SLOT(void refresh())               // one read cycle (also runs on a timer)
+
+    // membership actions (Epic 4) — return a short JSON/result string for the UI
+    SLOT(QString unlockKeystore())
+    SLOT(QString provisionWallet())
+    SLOT(QString registerMembership())
+}

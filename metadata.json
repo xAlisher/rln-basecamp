@@ -1,0 +1,32 @@
+{
+  "name": "rln_ui",
+  "display_name": "RLN Membership",
+  "version": "0.1.0",
+  "type": "ui_qml",
+  "interface": "universal",
+  "category": "messaging",
+  "description": "RLN membership status for Logos Messaging: membership state, epoch quota and registry, and (staged) membership setup. First backend:module reference app.",
+  "main": "rln_ui_plugin",
+  "view": "qml/Main.qml",
+  "dependencies": [
+    { "name": "delivery_module", "version": "~0.4.0" },
+    { "name": "liblogos_rln_module", "version": "~0.12.0" }
+  ],
+  "provides": [],
+  "uses": [],
+  "codegen": {
+    "rep": "src/rln_ui.rep"
+  },
+  "nix": {
+    "packages": { "build": [], "runtime": [] },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  },
+  "icon": "src/icons/icon.png",
+  "backend": "module"
+}
