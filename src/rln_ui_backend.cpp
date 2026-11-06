@@ -97,8 +97,15 @@ void RlnUiBackend::refresh() {
     const QString wstate = ws.value("state").toString();
     if (!wstate.isEmpty()) setWalletState(wstate);
     if (!payer.isEmpty()) {
-        const QString bal = lez.get_native_balance(payer);
-        if (!bal.isEmpty()) setPayerBalance(bal.trimmed());
+        const QString balRaw = lez.get_native_balance(payer);
+        if (!balRaw.isEmpty()) {
+            // Live module returns {"account":hex,"balance":"<decimal>"}; older contract returned a bare
+            // decimal string. Handle both.
+            const QJsonObject bo = parseObj(balRaw);
+            setPayerBalance(bo.contains(QStringLiteral("balance"))
+                                ? bo.value(QStringLiteral("balance")).toString()
+                                : balRaw.trimmed());
+        }
     }
     if (fundTargetUnits().isEmpty()) setFundTargetUnits(QString::fromUtf8(kFundTargetSuggested));
 
