@@ -18,7 +18,10 @@
     "rep": "src/rln_ui.rep"
   },
   "nix": {
-    "packages": { "build": [], "runtime": [] },
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
     "external_libraries": [],
     "cmake": {
       "find_packages": [],
@@ -27,5 +30,6 @@
       "extra_link_libraries": []
     }
   },
-  "icon": "src/icons/icon.png"
+  "icon": "src/icons/icon.png",
+  "backend": "module"
 }

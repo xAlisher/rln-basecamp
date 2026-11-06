@@ -3,7 +3,7 @@
 
   inputs = {
     # Pinned to the rev bc-shell-clone builds its backend:module fixtures with.
-    logos-module-builder.url = "github:logos-co/logos-module-builder/de169fd45d7bdf6e28ce1f151b4c34880523ace9";
+    logos-module-builder.url = "github:logos-co/logos-module-builder/5f74cdb3cecacde054c68d72fcc0d2cfe2195900";
 
     # Dependency module flakes, keyed by MODULE name so the builder can read their .lidl and
     # generate the modules().<dep> wrappers. delivery public source tops out at v0.3.3 (live is
